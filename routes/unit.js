@@ -1,5 +1,7 @@
 const router = require('express').Router();
+var mongoose = require('mongoose');
 let Unit = require('../models/unit.model');
+
 
 router.route('/').get((req, res) => {
     Unit.find()
@@ -12,6 +14,7 @@ router.route('/add').post((req, res) => {
     const name = req.body.name;
     const description = req.body.description;
     const size = req.body.size;
+    const products = [];
     const units = [];
     const images = req.body.images;
     const tags = req.body.tags;
@@ -21,6 +24,7 @@ router.route('/add').post((req, res) => {
         name,
         description,
         size,
+        products,
         units,
         images,
         tags,
@@ -33,8 +37,51 @@ router.route('/add').post((req, res) => {
 
 router.route('/:id').get((req, res) => {
     Unit.findById(req.params.id)
-        .then(exercise => res.json(exercise))
+        .then(unit => res.json(unit))
         .catch(err => res.status(400).json('Error: ' + err));
+});
+
+router.route('/:id/details').get((req, res) => {
+    Unit.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.params.id)
+            }
+
+        },
+        {
+            $lookup:
+            {
+                from: "products",
+                localField: "products.identifier",
+                foreignField: "identifier",
+                as: "products_in_unit"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "units",
+                localField: "units",
+                foreignField: "identifier",
+                as: "units_in_unit"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "rooms",
+                localField: "identifier",
+                foreignField: "units",
+                as: "in_room"
+            }
+        }
+
+    ]).exec((err, products_in_unit) => {
+        if (err) res.status(400).json('Error') + err;
+        console.log(products_in_unit);
+        res.json(products_in_unit)
+    })
 });
 
 router.route('/update/:id').post((req, res) => {

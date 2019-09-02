@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const mongoose = require('mongoose');
 let Product = require('../models/product.model');
 
 router.route('/').get((req, res) => {
@@ -48,6 +49,50 @@ router.route('/:id').get((req, res) => {
     Product.findById(req.params.id)
         .then(exercise => res.json(exercise))
         .catch(err => res.status(400).json('Error: ' + err));
+});
+
+router.route('/:id/details').get((req, res) => {
+    Product.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.params.id)
+            }
+
+        },
+        {
+            $lookup:
+            {
+                from: "units",
+                localField: "identifier",
+                foreignField: "products.identifier",
+                as: "product_located_inside_unit"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "units",
+                localField: "product_located_inside_unit.identifier",
+                foreignField: "units",
+                as: "unit_located_inside_unit"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "rooms",
+                localField: "product_located_inside_unit.identifier",
+                foreignField: "units",
+                as: "located_in_room"
+            }
+        },
+        
+
+    ]).exec((err, products_in_unit) => {
+        if (err) res.status(400).json('Error') + err;
+        console.log(products_in_unit);
+        res.json(products_in_unit)
+    })
 });
 
 router.route('/update/:id').post((req, res) => {

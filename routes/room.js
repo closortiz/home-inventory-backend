@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const mongoose = require('mongoose');
 let Room = require('../models/room.model');
 
 router.route('/').get((req, res) => {
@@ -35,6 +36,40 @@ router.route('/:id').get((req, res) => {
     Room.findById(req.params.id)
         .then(exercise => res.json(exercise))
         .catch(err => res.status(400).json('Error: ' + err));
+});
+
+router.route('/:id/details').get((req, res) => {
+    Room.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.params.id)
+            }
+
+        },
+        {
+            $lookup:
+            {
+                from: "units",
+                localField: "units",
+                foreignField: "identifier",
+                as: "units_in_room"
+            }
+        },
+        {
+            $lookup:
+            {
+                from: "products",
+                localField: "units_in_room.products.identifier",
+                foreignField: "identifier",
+                as: "products_in_room"
+            }
+        }
+
+    ]).exec((err, units_in_room) => {
+        if (err) res.status(400).json('Error') + err;
+        console.log(units_in_room);
+        res.json(units_in_room)
+    })
 });
 
 router.route('/update/:id').post((req, res) => {
