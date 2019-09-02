@@ -8,6 +8,8 @@ const unitSchema = new Schema({
     description: { type: String },
     size: { type: String },
     images: { type: Array },
+    products: { type: Array },
+    units: { type: Array },
     tags: { type: Array, required: true },
 }, {
         timestamps: true
